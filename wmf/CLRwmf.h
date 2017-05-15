@@ -17,7 +17,7 @@ class CLRwmf {
 public:
 	CLRwmf();
 	virtual ~CLRwmf();
-	void run_wmf(const cv::Mat& src_mat,const cv::Mat& disp);
+	cv::Mat run_wmf(const cv::Mat& src_mat,const cv::Mat& disp);
 };
 
 #endif /* WMF_CLRWMF_H_ */

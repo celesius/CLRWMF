@@ -373,13 +373,19 @@ template <class T> cv::Mat guidedfilter_color_runfilter(const cv::Mat& disp_bit,
 	int r = a_gfobj->m_r;
 	cv::Mat mean_p = box_filter<T>(disp_bit, r);
 	cv::divide(mean_p, a_gfobj->m_N, mean_p);
+	//save_mat_to_file<double>(mean_p, "mean_p.txt");
+
 	cv::Mat img_r;
 	cv::Mat img_g;
 	cv::Mat img_b;
 	split_bgr(a_gfobj->m_image, img_b, img_g, img_r);
+
 	cv::Mat mean_Ip_r = get_mean_Ip<T>(img_r, disp_bit, r, a_gfobj->m_N);
 	cv::Mat mean_Ip_g = get_mean_Ip<T>(img_g, disp_bit, r, a_gfobj->m_N);
 	cv::Mat mean_Ip_b = get_mean_Ip<T>(img_b, disp_bit, r, a_gfobj->m_N);
+	//save_mat_to_file<double>(mean_Ip_g, "mean_Ip_g.txt");
+	//save_mat_to_file<double>(mean_Ip_b, "mean_Ip_b.txt");
+
 	cv::Mat mult_mean_Ir_p;
 	cv::Mat mult_mean_Ig_p;
 	cv::Mat mult_mean_Ib_p;
@@ -422,11 +428,17 @@ template <class T> cv::Mat guidedfilter_color_runfilter(const cv::Mat& disp_bit,
 		}
 	}
 
+//	save_mat_to_file<double>(a_r, "a_r.txt");
+//	save_mat_to_file<double>(a_g, "a_g.txt");
+//	save_mat_to_file<double>(a_b, "a_b.txt");
 	cv::Mat b_mat = mean_p - a_r.mul(a_gfobj->m_mean_I_r) - a_g.mul(a_gfobj->m_mean_I_g) - a_b.mul(a_gfobj->m_mean_I_b);
-	cv::Mat q = box_filter<double>(a_r, r).mul(img_r) +
+	//save_mat_to_file<double>(b_mat, "b_mat.txt");
+
+	cv::Mat q = (box_filter<double>(a_r, r).mul(img_r) +
 				box_filter<double>(a_g, r).mul(img_g) +
 				box_filter<double>(a_b, r).mul(img_b) +
-				box_filter<double>(b_mat, r).mul(a_gfobj->m_N);
+				box_filter<double>(b_mat, r));//(a_gfobj->m_N);
+	cv::divide(q, a_gfobj->m_N,q);
 	return q;
 }
 
@@ -473,41 +485,32 @@ CLRwmf::~CLRwmf() {
 	delete m_gfobj;
 }
 
-void CLRwmf::run_wmf(const cv::Mat& src_mat,const cv::Mat& disp)
+cv::Mat CLRwmf::run_wmf(const cv::Mat& src_mat,const cv::Mat& disp)
 {
 	//cv::Mat box = box_filter<uchar>(src_mat, 4);
 	cv::Mat src_double;
 	src_mat.convertTo(src_double, CV_64FC3, 1.0/255.0);
-
+	//cv::imshow("src", src_mat);
+	//cv::imshow("disp", disp);
 	int disp_num = 16;
 	uchar scalar = 16;
 
 	guidedfilter_color_precompute(src_double, 10, 1.0e-4,m_gfobj);
 	cv::Mat imgOL;
 	cv::Mat imgAccum = cv::Mat(src_mat.rows, src_mat.cols, CV_64FC1, cv::Scalar::all(0));
-
 	cv::Mat idxSelected;
 	cv::Mat disp_out = cv::Mat(src_mat.size(), CV_8UC1, cv::Scalar::all(0));
-
 
 	for(int i = 1; i < disp_num + 1; i++ )
 	{
 		cv::Mat slice_mat;
 		slice_disp(disp, i, slice_mat,scalar);
-		//show_bit(slice_mat);
 		imgOL = guidedfilter_color_runfilter<double>(slice_mat, m_gfobj);
 		imgAccum = imgAccum + imgOL;
 		fill_filter_out(disp_out, imgAccum, i, scalar);
-		//show_bit<uchar>(disp_out );
-		//cv::waitKey(0);
 	}
-	disp_out = disp_out*16;
-	cv::imshow("dd", disp_out);
-	//std::cout << " src: " <<std::endl;
-	//std::cout << src_mat <<std::endl;
-	//std::cout << " box: "  << std::endl;
-	//std::cout << box << std::endl;
-
-	//cv::imshow("div", c);
-	cv::waitKey(0);
+	return disp_out;
+	//disp_out = disp_out*16;
+	//cv::imshow("dd", disp_out);
+	//cv::waitKey(0);
 }
